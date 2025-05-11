@@ -22,7 +22,7 @@ all: buzzer.elf
 
 #additional rules for files
 
-buzzer.elf: ${COMMON_OBJECTS} arr.o buzzer.o jukeMain.o ../lib/libTimer.a
+buzzer.elf: ${COMMON_OBJECTS} sleep_handler.o arr.o buzzer.o jukeMain.o ../lib/libTimer.a
 
 	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $^ -lTimer -lLcd
 

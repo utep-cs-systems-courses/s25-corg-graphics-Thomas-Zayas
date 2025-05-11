@@ -1,0 +1,21 @@
+	.arch msp430g2553
+	.p2align 1,0
+	.text
+
+	.global pauser
+	.extern sleep
+	.extern wake
+	.extern make_pause
+pauser:
+	cmp r12, #0
+	jc goSleep
+	call #wake
+	mov #0,r12
+	jmp end
+goSleep:	
+	call #sleep
+	mov #1,r12
+end:
+	ret
+	
+	

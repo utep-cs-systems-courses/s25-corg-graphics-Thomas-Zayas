@@ -1,3 +1,4 @@
+
 #include <msp430.h>
 #include <libTimer.h>
 #include "buzzer.h"
@@ -5,7 +6,7 @@
 #include "lcddraw.h"
 
 #define LED BIT6/* note that bit zero req'd for display */
-
+#define T 1
 #define SW1 1
 #define SW2 2
 #define SW3 4
@@ -14,7 +15,7 @@
 #define SWITCHES 15
 int blue = 0, green = 0, red = 0, switches = 0;
 unsigned int color = 0 | 0 | 0;
-
+unsigned short pause = 0x0;
 static char
 switch_update_interrupt_sense()
 {
@@ -34,11 +35,19 @@ switch_init()/* setup switch */
   P2DIR &= ~SWITCHES;/* set switches' bits for input */
   switch_update_interrupt_sense();
 }
+char pauseDelay = 0;
 void
 switch_interrupt_handler()
 {
   char p2val = switch_update_interrupt_sense();
   switches = ~p2val & SWITCHES;
+  if (switches & SW1){
+    pauser(pause);
+    or_sr(0x8);//interupts on
+  }
+  if(switches & SW2){
+    print_letter('E',90);
+  }
 }
 void print_letter(char c,char off){
   c -= 0x20;
@@ -61,7 +70,7 @@ void print_letter(char c,char off){
     truC=0;
     truR++;
   }
-  return;
+  
 }
 void clear_letters(){
   fillRectangle(5,5,100,25,COLOR_WHITE);
@@ -89,8 +98,23 @@ __interrupt_vec(PORT2_VECTOR) Port_2(){
   }
 }
 
-int main() {
+void sleep(){
+  pause = 1;
+  make_pause();
+  WDTCTL = WDTPW | WDTHOLD;
+  and_sr(0xf7); //interupts off
+  update_note(0);
+  
+}
+int count = 0, tempCount = 0;
+void wake(){
+  pause = 0;
+  clear_pause();
+  enableWDTInterrupts();
+}
 
+int main() {
+  
   switch_init();
   configureClocks();
   buzzer_init();
@@ -98,12 +122,22 @@ int main() {
   lcd_init();
   or_sr(0x8);          // GIE enable interupts
   clearScreen(COLOR_WHITE);
+  while(1){
+    
+    if(pause){
+    
+      
+    or_sr(0x10);//turn off cpu
+    }
+    
+  }
+    
+
+ 
+ 
   
 }
-int pauseDelay = 0;
 int colorCount = 0;
-int pause = 0;
-int count= 0;
 int secondCount = 0;
 int colorCycle = 0;
 short newnote = 0;
@@ -114,33 +148,17 @@ void color_swap(int color){
   fillRectangle(45,40,10,30,color);
   fillRectangle(85,40,10,30,color);
   fillRectangle(45,40,40,10,color);
-  
 }  
 
 void __interrupt_vec(WDT_VECTOR) WDT(){
   
-  if (switches & SW4) count =0;  
-  pauseDelay++;
+  if (switches & SW4) count =0;
   
-  if(switches & SW1 && pauseDelay >=60){
-    if(!pause) {
-      pause = 1;
-      pauseDelay=0;
-      make_pause();
-    }
-    else {
-      pause =0;
-      pauseDelay =0;
-      clear_pause();
-    }
-  }
   
-  if(!pause){
+  
   secondCount ++;
-  colorCount ++;}
-  else {
-    update_note(0);
-  }
+  colorCount ++;
+  
   if (secondCount >= lendv[count]-5) {
     update_note(0);
   }
@@ -172,7 +190,6 @@ void __interrupt_vec(WDT_VECTOR) WDT(){
     colorCount = 0;
     color = (blue << 11) | (green << 5) | red;
   } 
-
   if(secondCount >=(lendv[count])){
     update_note(notesdv[count]);
     count++;
